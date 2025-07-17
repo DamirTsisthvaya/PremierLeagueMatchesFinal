@@ -23,6 +23,16 @@ import androidx.navigation.compose.rememberNavController
 import com.example.premierleague.ui.theme.PremierLeagueMatchesTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+
+
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -38,7 +48,7 @@ class MainActivity : ComponentActivity() {
 fun PremierLeagueApp() {
     var showSplash by remember { mutableStateOf(true) }
 
-    // Показываем сплэш-скрин 2 секунды, затем скрываем
+
     LaunchedEffect(Unit) {
         delay(2000) // Задержка 2 секунды
         showSplash = false
@@ -61,18 +71,53 @@ fun PremierLeagueApp() {
 
 @Composable
 fun SplashScreen() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        // Кастомный сплэш-скрин (можно заменить на ваш дизайн)
-        Text(
-            text = "Premier League",
-            style = MaterialTheme.typography.displayLarge,
-            color = Color.White
+    val scale = remember { androidx.compose.animation.core.Animatable(0.8f) }
+
+    LaunchedEffect(Unit) {
+        scale.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(
+                durationMillis = 1000,
+                easing = FastOutSlowInEasing
+            )
         )
     }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFF0D47A1),
+                        Color(0xFF42A5F5)
+                    )
+                )
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = "Premier League",
+                style = MaterialTheme.typography.displayLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                ),
+                modifier = Modifier.scale(scale.value)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = "The best of English football",
+                style = MaterialTheme.typography.titleMedium.copy(
+                    color = Color.White.copy(alpha = 0.85f)
+                )
+            )
+        }
+    }
 }
+
 
 @Preview
 @Composable
