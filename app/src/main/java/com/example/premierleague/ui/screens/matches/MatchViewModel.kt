@@ -5,8 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.premierleague.data.repository.MatchRepository
 import com.example.premierleague.model.Match
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -30,9 +29,9 @@ class MatchViewModel @Inject constructor(
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery
 
-    private var allLoadedMatches: List<Match> = emptyList()
     private var currentPage = 0
     private val pageSize = 10
+    private var isLastPage = false
 
     init {
         loadMatches()
@@ -43,11 +42,10 @@ class MatchViewModel @Inject constructor(
             _isLoading.value = true
             _error.value = null
             try {
-                repository.getMatches().collect { all ->
-                    allLoadedMatches = all
-                    currentPage = 1
-                    _matches.value = getPaginatedMatches()
-                }
+                currentPage = 0
+                isLastPage = false
+                val firstPage = repository.getMatchesPaginated(pageSize, 0)
+                _matches.value = firstPage
             } catch (e: Exception) {
                 _error.value = e.message
             } finally {
@@ -57,32 +55,36 @@ class MatchViewModel @Inject constructor(
     }
 
     fun loadNextPage() {
-        if (_isPaginating.value || _searchQuery.value.isNotBlank()) return
+        if (_isPaginating.value || isLastPage || _searchQuery.value.isNotBlank()) return
 
         viewModelScope.launch {
             _isPaginating.value = true
-            currentPage++
-            _matches.value = getPaginatedMatches()
-            _isPaginating.value = false
+            try {
+                currentPage++
+                val nextPage = repository.getMatchesPaginated(pageSize, currentPage * pageSize)
+                if (nextPage.isEmpty()) {
+                    isLastPage = true
+                } else {
+                    _matches.value = _matches.value + nextPage
+                }
+            } catch (e: Exception) {
+                _error.value = e.message
+            } finally {
+                _isPaginating.value = false
+            }
         }
-    }
-
-    private fun getPaginatedMatches(): List<Match> {
-        val end = currentPage * pageSize
-        return allLoadedMatches.take(end.coerceAtMost(allLoadedMatches.size))
     }
 
     fun onSearchQueryChanged(query: String) {
         _searchQuery.value = query
-
         viewModelScope.launch {
             if (query.isBlank()) {
-                _matches.value = getPaginatedMatches()
+                currentPage = 0
+                isLastPage = false
+                val firstPage = repository.getMatchesPaginated(pageSize, 0)
+                _matches.value = firstPage
             } else {
-                val filtered = allLoadedMatches.filter {
-                    it.HomeTeam.contains(query, ignoreCase = true) ||
-                            it.AwayTeam.contains(query, ignoreCase = true)
-                }
+                val filtered = repository.searchMatches(query)
                 _matches.value = filtered
             }
         }
@@ -93,4 +95,3 @@ class MatchViewModel @Inject constructor(
         loadMatches()
     }
 }
-
