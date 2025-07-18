@@ -34,10 +34,10 @@ class MatchViewModel @Inject constructor(
     private var isLastPage = false
 
     init {
-        loadMatches()
+        loadFirstPage()
     }
 
-    fun loadMatches() {
+    private fun loadFirstPage() {
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
@@ -92,6 +92,6 @@ class MatchViewModel @Inject constructor(
 
     fun clearAndReload() {
         _searchQuery.value = ""
-        loadMatches()
+        loadFirstPage()
     }
 }
